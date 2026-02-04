@@ -24,3 +24,24 @@ test('login', async () => {
 function expectValidJwt(potentialJwt) {
   expect(potentialJwt).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
 }
+
+
+
+test('logout prevents further access', async () => {
+  expectValidJwt(testUserAuthToken);
+
+  const logoutRes = await request(app)
+    .delete('/api/auth')
+    .set('Authorization', `Bearer ${testUserAuthToken}`);
+
+  expect(logoutRes.status).toBe(200);
+  expect(logoutRes.body).toEqual({ message: 'logout successful' });
+
+  const protectedRes = await request(app)
+    .delete('/api/auth')
+    .set('Authorization', `Bearer ${testUserAuthToken}`);
+
+  expect(protectedRes.status).toBe(401);
+});
+
+
