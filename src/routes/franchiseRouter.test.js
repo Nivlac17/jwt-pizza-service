@@ -2,27 +2,30 @@ const request = require('supertest');
 const app = require('../service');
 const { Role, DB } = require('../database/database.js');
 
-
+let adminUser;
+let adminToken;
 
 function randomName() {
   return Math.random().toString(36).substring(2, 12);
 }
 
 async function createAdminUser() {
-  let user = { password: 'awesomePassword', roles: [{ role: Role.Admin }] };
+  const user = { password: 'awesomePassword', roles: [{ role: Role.Admin }] };
   user.name = randomName();
   user.email = `${user.name}@admin.com`;
 
-  user = await DB.addUser(user);
-  return { ...user, password: 'awesomePassword' };
+  const created = await DB.addUser(user);
+  // Return a user object that includes the plain password for login in tests
+  return { ...created, password: 'awesomePassword' };
 }
 
 function expectValidJwt(potentialJwt) {
   expect(potentialJwt).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
 }
 
-test('admin can create a franchise', async () => {
-  const adminUser = await createAdminUser();
+
+beforeAll(async () => {
+  adminUser = await createAdminUser();
   const loginRes = await request(app).put('/api/auth').send({
     email: adminUser.email,
     password: adminUser.password,
@@ -30,8 +33,13 @@ test('admin can create a franchise', async () => {
 
   expect(loginRes.status).toBe(200);
   expectValidJwt(loginRes.body.token);
+  adminToken = loginRes.body.token;
+});
 
-  const token = loginRes.body.token;
+
+
+
+test('admin can create a franchise', async () => {
   const diner = {
     name: randomName(),
     email: `${randomName()}@jwt.com`,
@@ -40,7 +48,6 @@ test('admin can create a franchise', async () => {
 
   const registerRes = await request(app).post('/api/auth').send(diner);
   expect(registerRes.status).toBe(200);
-
   const franchiseBody = {
     name: `franchise ${randomName()}`,
     admins: [{ email: diner.email }],
@@ -48,7 +55,7 @@ test('admin can create a franchise', async () => {
 
   const createRes = await request(app)
     .post('/api/franchise')
-    .set('Authorization', `Bearer ${token}`)
+    .set('Authorization', `Bearer ${adminToken}`)
     .send(franchiseBody);
 
   expect(createRes.status).toBe(200);
@@ -74,19 +81,36 @@ test('non-admin cant create franchise', async () => {
 
 
 
-
 test('franchise create store', async () => {
-  const user = { name: randomName(), email: `${randomName()}@jwt.com`, password: 'a' };
+  const franchiseAdmin = {
+    name: randomName(),
+    email: `${randomName()}@test.com`,
+    password: 'a',
+  };
+  const regRes = await request(app).post('/api/auth').send(franchiseAdmin);
+  expect(regRes.status).toBe(200);
 
-  const registerRes = await request(app).post('/api/auth').send(user);
-  expect(registerRes.status).toBe(200);
-  const token = registerRes.body.token;
-  expectValidJwt(token);
-
-  const createRes = await request(app)
+  const createFranchiseRes = await request(app)
     .post('/api/franchise')
-    .set('Authorization', `Bearer ${token}`)
-    .send({ name: `fr-${randomName()}`, admins: [{ email: user.email }] });
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      name: `fr-${randomName()}`,
+      admins: [{ email: franchiseAdmin.email }],
+    });
 
-  expect(createRes.status).toBe(403);
+  expect(createFranchiseRes.status).toBe(200);
+  const franchiseId = createFranchiseRes.body.id;
+
+  const loginRes = await request(app).put('/api/auth').send(franchiseAdmin);
+  expect(loginRes.status).toBe(200);
+  const franchiseAdminToken = loginRes.body.token;
+  expectValidJwt(franchiseAdminToken);
+
+  const storeRes = await request(app)
+    .post(`/api/franchise/${franchiseId}/store`)
+    .set('Authorization', `Bearer ${franchiseAdminToken}`)
+    .send({ name: `store-${randomName()}` });
+
+  expect(storeRes.status).toBe(200);
+  expect(storeRes.body.name).toBeDefined();
 });
