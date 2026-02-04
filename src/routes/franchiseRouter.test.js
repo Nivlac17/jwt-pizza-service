@@ -39,7 +39,7 @@ beforeAll(async () => {
 
 
 
-test('admin can create a franchise', async () => {
+test('admin can create franchise', async () => {
   const diner = {
     name: randomName(),
     email: `${randomName()}@jwt.com`,
@@ -81,15 +81,18 @@ test('non-admin cant create franchise', async () => {
 
 
 
-test('franchise create store', async () => {
+
+
+
+test('franchise create and delete store', async () => {
   const franchiseAdmin = {
     name: randomName(),
     email: `${randomName()}@test.com`,
     password: 'a',
   };
+
   const regRes = await request(app).post('/api/auth').send(franchiseAdmin);
   expect(regRes.status).toBe(200);
-
   const createFranchiseRes = await request(app)
     .post('/api/franchise')
     .set('Authorization', `Bearer ${adminToken}`)
@@ -100,12 +103,11 @@ test('franchise create store', async () => {
 
   expect(createFranchiseRes.status).toBe(200);
   const franchiseId = createFranchiseRes.body.id;
-
+  expect(franchiseId).toBeTruthy();
   const loginRes = await request(app).put('/api/auth').send(franchiseAdmin);
   expect(loginRes.status).toBe(200);
   const franchiseAdminToken = loginRes.body.token;
   expectValidJwt(franchiseAdminToken);
-
   const storeRes = await request(app)
     .post(`/api/franchise/${franchiseId}/store`)
     .set('Authorization', `Bearer ${franchiseAdminToken}`)
@@ -113,4 +115,18 @@ test('franchise create store', async () => {
 
   expect(storeRes.status).toBe(200);
   expect(storeRes.body.name).toBeDefined();
+  const storeId = storeRes.body.id || storeRes.body._id;
+  expect(storeId).toBeTruthy();
+
+  // Delete store (assumes this is the correct delete route)
+  const deleteRes = await request(app)
+    .delete(`/api/franchise/${franchiseId}/store/${storeId}`)
+    .set('Authorization', `Bearer ${franchiseAdminToken}`);
+
+  expect([200, 204]).toContain(deleteRes.status);
+  const getRes = await request(app)
+    .get(`/api/franchise/${franchiseId}/store/${storeId}`)
+    .set('Authorization', `Bearer ${franchiseAdminToken}`);
+
+  expect(getRes.status).toBe(404);
 });
