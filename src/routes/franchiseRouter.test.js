@@ -235,3 +235,50 @@ test('user cannot get another user’s franchises', async () => {
   expect(getRes.body).toEqual([]); // router returns empty array if unauthorized
 });
 
+
+
+test('delete franchise removes it from user franchises', async () => {
+  // Create a franchise admin user
+  const franchiseAdmin = {
+    name: randomName(),
+    email: `${randomName()}@delete.com`,
+    password: 'a',
+  };
+
+  const regRes = await request(app).post('/api/auth').send(franchiseAdmin);
+  expect(regRes.status).toBe(200);
+
+  // Create franchise assigned to this user
+  const createRes = await request(app)
+    .post('/api/franchise')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      name: `fr-${randomName()}`,
+      admins: [{ email: franchiseAdmin.email }],
+    });
+
+  expect(createRes.status).toBe(200);
+  const franchiseId = createRes.body.id;
+  expect(franchiseId).toBeTruthy();
+
+  // Verify franchise exists for the user (as admin)
+  const getBeforeDelete = await request(app)
+    .get(`/api/franchise/${regRes.body.user.id}`)
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  expect(getBeforeDelete.status).toBe(200);
+  expect(getBeforeDelete.body.map((f) => f.id)).toContain(franchiseId);
+
+  // Delete franchise (route has no auth, so no token required)
+  const deleteRes = await request(app).delete(`/api/franchise/${franchiseId}`);
+  expect(deleteRes.status).toBe(200);
+  expect(deleteRes.body.message).toBe('franchise deleted');
+
+  // Verify franchise no longer appears
+  const getAfterDelete = await request(app)
+    .get(`/api/franchise/${regRes.body.user.id}`)
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  expect(getAfterDelete.status).toBe(200);
+  expect(getAfterDelete.body.map((f) => f.id)).not.toContain(franchiseId);
+});
