@@ -118,7 +118,6 @@ test('franchise create and delete store', async () => {
   const storeId = storeRes.body.id || storeRes.body._id;
   expect(storeId).toBeTruthy();
 
-  // Delete store (assumes this is the correct delete route)
   const deleteRes = await request(app)
     .delete(`/api/franchise/${franchiseId}/store/${storeId}`)
     .set('Authorization', `Bearer ${franchiseAdminToken}`);
@@ -131,4 +130,108 @@ test('franchise create and delete store', async () => {
   expect(getRes.status).toBe(404);
 });
 
+
+
+
+
+
+test('admin can get franchises for any user', async () => {
+  // Create a normal user who will be a franchise admin
+  const user = {
+    name: randomName(),
+    email: `${randomName()}@user.com`,
+    password: 'a',
+  };
+
+  const regRes = await request(app).post('/api/auth').send(user);
+  expect(regRes.status).toBe(200);
+
+  // Create a franchise and assign that user as admin (using adminToken)
+  const franchiseRes = await request(app)
+    .post('/api/franchise')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      name: `fr-${randomName()}`,
+      admins: [{ email: user.email }],
+    });
+
+  expect(franchiseRes.status).toBe(200);
+  const franchiseId = franchiseRes.body.id;
+  expect(franchiseId).toBeTruthy();
+
+  // Admin fetches franchises for that user
+  const getRes = await request(app)
+    .get(`/api/franchise/${regRes.body.user.id}`)
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  expect(getRes.status).toBe(200);
+  expect(Array.isArray(getRes.body)).toBe(true);
+  expect(getRes.body.map((f) => f.id)).toContain(franchiseId);
+});
+
+test('user can get their own franchises', async () => {
+  const user = {
+    name: randomName(),
+    email: `${randomName()}@self.com`,
+    password: 'a',
+  };
+
+  const regRes = await request(app).post('/api/auth').send(user);
+  expect(regRes.status).toBe(200);
+  const userToken = regRes.body.token;
+  expectValidJwt(userToken);
+
+  // Create franchise assigned to this user
+  const franchiseRes = await request(app)
+    .post('/api/franchise')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      name: `fr-${randomName()}`,
+      admins: [{ email: user.email }],
+    });
+
+  expect(franchiseRes.status).toBe(200);
+  const franchiseId = franchiseRes.body.id;
+
+  // User fetches their own franchises
+  const getRes = await request(app)
+    .get(`/api/franchise/${regRes.body.user.id}`)
+    .set('Authorization', `Bearer ${userToken}`);
+
+  expect(getRes.status).toBe(200);
+  expect(Array.isArray(getRes.body)).toBe(true);
+  expect(getRes.body.map((f) => f.id)).toContain(franchiseId);
+});
+
+test('user cannot get another user’s franchises', async () => {
+  // First user
+  const user1 = {
+    name: randomName(),
+    email: `${randomName()}@one.com`,
+    password: 'a',
+  };
+
+  const reg1 = await request(app).post('/api/auth').send(user1);
+  expect(reg1.status).toBe(200);
+  const token1 = reg1.body.token;
+  expectValidJwt(token1);
+
+  // Second user
+  const user2 = {
+    name: randomName(),
+    email: `${randomName()}@two.com`,
+    password: 'a',
+  };
+
+  const reg2 = await request(app).post('/api/auth').send(user2);
+  expect(reg2.status).toBe(200);
+
+  // user1 tries to fetch user2's franchises
+  const getRes = await request(app)
+    .get(`/api/franchise/${reg2.body.user.id}`)
+    .set('Authorization', `Bearer ${token1}`);
+
+  expect(getRes.status).toBe(200);
+  expect(getRes.body).toEqual([]); // router returns empty array if unauthorized
+});
 
