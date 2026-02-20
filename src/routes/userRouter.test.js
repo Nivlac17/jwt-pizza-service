@@ -1,6 +1,5 @@
 const request = require('supertest');
 const app = require('../service');
-const { Role, DB } = require('../database/database.js');
 
 
 test('list users unauthorized', async () => {
@@ -10,6 +9,7 @@ test('list users unauthorized', async () => {
 
 test('list users', async () => {
   const [user, userToken] = await registerUser(request(app));
+  console.log(user);
   const listUsersRes = await request(app)
     .get('/api/user')
     .set('Authorization', 'Bearer ' + userToken);
@@ -100,6 +100,7 @@ test('update self user', async () => {
 
 test('update other user forbidden', async () => {
   const [user1, token1] = await registerUser(request(app));
+  console.log(user1);
   const [user2] = await registerUser(request(app));
 
   const res = await request(app)
@@ -131,6 +132,7 @@ test('delete user returns not implemented', async () => {
 
 test('list users returns empty object body', async () => {
   const [user, token] = await registerUser(request(app));
+  console.log(user);
 
   const res = await request(app)
     .get('/api/user')

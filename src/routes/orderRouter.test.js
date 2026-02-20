@@ -1,25 +1,15 @@
 const request = require('supertest');
 const app = require('../service');
 const { Role, DB } = require('../database/database.js');
-const config = require('../config.js');
 
 
+let adminUser;
+let adminToken;
 
 function randomName() {
   return Math.random().toString(36).substring(2, 12);
 }
 
-async function clearDatabase() {
-  const connection = await DB.getConnection();
-  try {
-    await connection.execute('DELETE FROM auth');
-    await connection.execute('DELETE FROM userRole');
-    await connection.execute('DELETE FROM user');
-    await connection.execute('DELETE FROM menu');
-  } finally {
-    connection.end();
-  }
-}
 
 async function registerUser(service) {
   const testUser = {
@@ -33,16 +23,7 @@ async function registerUser(service) {
   return [res.body.user, res.body.token];
 }
 
-async function loginAsAdmin(service) {
-  const res = await service
-    .put('/api/auth')
-    .send({
-      email: config.db.connection.adminemail,
-      password: config.db.connection.adminpassword,
-    });
 
-  return [res.body.user, res.body.token];
-}
 
 
 // beforeEach(async () => {
@@ -81,6 +62,7 @@ test('get menu', async () => {
 
 test('non-admin cannot add menu item', async () => {
   const [user, token] = await registerUser(request(app));
+  console.log(user);
 
   const newMenuItem = {
     title: 'New Pizza',
