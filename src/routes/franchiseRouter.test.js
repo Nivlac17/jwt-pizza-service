@@ -132,11 +132,8 @@ test('franchise create and delete store', async () => {
 
 
 
-
-
-
 test('admin can get franchises for any user', async () => {
-  // Create a normal user who will be a franchise admin
+  // Create a normal user who will be a franchise admin commit
   const user = {
     name: randomName(),
     email: `${randomName()}@user.com`,
