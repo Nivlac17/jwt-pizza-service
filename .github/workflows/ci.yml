@@ -22,13 +22,13 @@ jobs:
         options: >-
           --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
 
-      deploy:
-        runs-on: ubuntu-latest
-        permissions:
-          id-token: write
-        needs: build
-        env:
-          version: ${{needs.build.outputs.version}}
+    deploy:
+      runs-on: ubuntu-latest
+      permissions:
+        id-token: write
+      needs: build
+      env:
+        version: ${{needs.build.outputs.version}}
 
     steps:
       - name: Download distribution artifact
