@@ -23,13 +23,6 @@ jobs:
           --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
 
 
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-    needs: build
-    env:
-      version: ${{needs.build.outputs.version}}
 
 
     steps:
@@ -137,3 +130,10 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >>  $GITHUB_OUTPUT
 
 
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    needs: build
+    env:
+      version: ${{needs.build.outputs.version}}
