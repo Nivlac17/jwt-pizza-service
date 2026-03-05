@@ -23,8 +23,6 @@ jobs:
           --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
 
 
-
-
     steps:
       - name: Download distribution artifact
         uses: actions/download-artifact@v4
@@ -93,6 +91,12 @@ jobs:
           sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
 
 
+      - name: Update distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: dist/
+
 
         
   deploy:
@@ -130,7 +134,12 @@ jobs:
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: 'jwt-pizza-service'
+          ECR_REPOSITORY: jwt-pizza-service
         run: |
-          docker build --platform=linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY --push .
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >>  $GITHUB_OUTPUT
+          docker build \
+            --platform=linux/arm64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ env.version }} \
+            --push \
+            package
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >> $GITHUB_OUTPUT
