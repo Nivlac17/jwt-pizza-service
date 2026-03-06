@@ -5,7 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
   build:
     name: Build
@@ -16,21 +15,22 @@ jobs:
       mysql:
         image: mysql:8.0.29
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: tempdbpassword
           MYSQL_DATABASE: pizza
-        # remove port mapping to avoid collision
+        ports:
+          - '3306:3306'
         options: >-
-          --health-cmd "mysqladmin ping -p$MYSQL_ROOT_PASSWORD" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+          --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+
 
     steps:
+      # - name: Download distribution artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: package
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Download distribution artifact (if re-running build from artifact)
-        uses: actions/download-artifact@v4
-        with:
-          name: package
-          # optional: if you expect an existing package during rebuild; safe to keep
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -43,50 +43,28 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Safer config: write a config.js that reads from environment variables at runtime.
-      # This avoids embedding secret literals into files that might leak.
-      - name: Write config file (env-driven)
+      - name: Write config file
         run: |
-          cat > src/config.js <<'EOF'
-          module.exports = {
-            jwtSecret: process.env.JWT_SECRET || 'dev-secret',
+          echo "module.exports = {
+            jwtSecret: '${{ secrets.JWT_SECRET }}',
             db: {
               connection: {
-                host: process.env.DB_HOSTNAME || '127.0.0.1',
-                user: process.env.DB_USERNAME || 'root',
-                password: process.env.DB_PASSWORD || 'tempdbpassword',
-                database: process.env.DB_NAME || 'pizza',
+                host: '127.0.0.1',
+                user: 'root',
+                password: 'tempdbpassword',
+                database: 'pizza',
                 connectTimeout: 60000,
               },
               listPerPage: 10,
             },
             factory: {
-              url: process.env.FACTORY_URL || 'https://pizza-factory.cs329.click',
-              apiKey: process.env.FACTORY_API_KEY || '',
+              url: 'https://pizza-factory.cs329.click',
+              apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
-          };
-          EOF
+          };" > src/config.js
 
       - name: Tests
-        env:
-          # Provide DB secrets and factory API key to the test run, but only in the job environment
-          DB_HOSTNAME: 127.0.0.1
-          DB_USERNAME: root
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: pizza
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
-        run: |
-          # Wait for MySQL to be healthy (optional retry)
-          for i in $(seq 1 20); do
-            if mysqladmin ping -h 127.0.0.1 -u root -p"$DB_PASSWORD" --silent; then
-              echo "MySQL is up"
-              break
-            fi
-            echo "Waiting for MySQL..."
-            sleep 3
-          done
-          npm test
+        run: npm test
 
       - name: set version
         id: set_version
@@ -96,44 +74,44 @@ jobs:
           printf '{"version": "%s" }' "$version" > src/version.json
 
       - name: Update coverage
-        env:
-          FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
-          NET_ID: ${{ secrets.NET_ID }}
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
           color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
-          curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${NET_ID}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer $FACTORY_API_KEY"
+          curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzaservicecoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+
 
       - name: Create dist
         run: |
-          rm -rf dist || true
-          mkdir -p dist
-          cp Dockerfile dist/
-          cp -r src dist/
-          cp *.json dist/ || true
-          # No sed of secrets here; runtime will use env vars
+          mkdir dist
+          cp Dockerfile dist
+          cp -r src/* dist
+          cp *.json dist
+          sed -i "s/root/${{ secrets.DB_USERNAME }}/g" dist/config.js
+          sed -i "s/tempdbpassword/${{ secrets.DB_PASSWORD }}/g" dist/config.js
+          sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
 
-      - name: Upload distribution artifact
+
+      - name: Update distribution artifact
         uses: actions/upload-artifact@v4
         with:
           name: package
           path: dist/
-
+        
   deploy:
-    name: Deploy to ECR
     runs-on: ubuntu-latest
-    needs: build
     permissions:
       id-token: write
+    needs: build
     env:
-      version: ${{ needs.build.outputs.version }}
+      version: ${{needs.build.outputs.version}}
+
     steps:
       - name: Download distribution artifact
         uses: actions/download-artifact@v4
         with:
           name: package
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Create OIDC token to AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           audience: sts.amazonaws.com
@@ -147,21 +125,14 @@ jobs:
       - name: Set up machine emulation
         uses: docker/setup-qemu-action@v3
 
-      - name: Set up Docker buildx
+      - name: Set up Docker build
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push container image (tagged with version and latest)
+      - name: Build and push container image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: 'jwt-pizza-service'
-          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          # Build directory from downloaded artifact: package/dist
-          BUILD_CONTEXT=package/dist
-          echo "Building from $BUILD_CONTEXT"
-          docker buildx build --platform=linux/arm64 \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-            --push $BUILD_CONTEXT
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$VERSION" >> $GITHUB_OUTPUT
+          docker build --platform=linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY --push package
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >>  $GITHUB_OUTPUT
