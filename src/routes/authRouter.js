@@ -6,7 +6,6 @@ const { DB, Role } = require('../database/database.js');
 
 const authRouter = express.Router();
 
-// hello
 authRouter.docs = [
   {
     method: 'POST',
