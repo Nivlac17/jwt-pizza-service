@@ -3,6 +3,7 @@ const config = require('../config.js');
 const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
+const metrics = require('../metrics');
 
 const orderRouter = express.Router();
 
@@ -79,17 +80,32 @@ orderRouter.post(
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
-    const r = await fetch(`${config.factory.url}/api/order`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
-      body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
-    });
-    const j = await r.json();
-    if (r.ok) {
-      res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
-    } else {
-      res.status(500).send({ message: 'Failed to fulfill order at factory', followLinkToEndChaos: j.reportUrl });
+
+    try{
+        const r = await fetch(`${config.factory.url}/api/order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', authorization: `Bearer ${config.factory.apiKey}` },
+          body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
+        });
+        const j = await r.json();
+
+        const latency = Date.now() - start;
+        const price = order.items.reduce((total, item) => total + Number(item.price), 0);
+
+        if (r.ok) {
+          metrics.pizzaPurchase(true, latency, price);
+          res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
+        } else {
+          metrics.pizzaPurchase(false, latency, 0);
+          res.status(500).send({ message: 'Failed to fulfill order at factory', followLinkToEndChaos: j.reportUrl });
+        }
+
+     } catch (err) {
+      const latency = Date.now() - start;
+      metrics.pizzaPurchase(false, latency, 0);
+      throw err;
     }
+    
   })
 );
 

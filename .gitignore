@@ -5,3 +5,5 @@ config.js
 coverage
 dist
 genPizzaData.sh
+secrets
+secrets/*
