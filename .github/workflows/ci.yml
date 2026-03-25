@@ -58,7 +58,7 @@ jobs:
 
 
                 adminuser: '${{ secrets.ADMIN_USER }}',
-                adminpassword: "${{ secrets.ADMIN_PASSWORD }}",
+                adminpassword: '${{ secrets.ADMIN_PASSWORD }}',
                 adminemail: '${{ secrets.ADMIN_EMAIL }}',
 
               },
