@@ -54,6 +54,13 @@ jobs:
                 password: 'tempdbpassword',
                 database: 'pizza',
                 connectTimeout: 60000,
+
+
+
+                adminuser: '${{ secrets.ADMIN_USER }}',
+                adminpassword: "${{ secrets.ADMIN_PASSWORD }}",
+                adminemail: '${{ secrets.ADMIN_EMAIL }}',
+
               },
               listPerPage: 10,
             },
