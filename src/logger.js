@@ -21,9 +21,6 @@ class Logger {
   };
 
   log(level, type, logData) {
-    if (process.env.NODE_ENV === 'test') {
-        return;
-    }
     const labels = { component: config.logging.source, level: level, type: type };
     const values = [this.nowString(), this.sanitize(logData)];
     const logEvent = { streams: [{ stream: labels, values: [values] }] };
@@ -41,50 +38,15 @@ class Logger {
     return (Math.floor(Date.now()) * 1000000).toString();
   }
 
-sanitize(data) {
-  if (data === null || data === undefined) return data;
-
-  if (typeof data === 'string') {
-    return data;
+  sanitize(logData) {
+    logData = JSON.stringify(logData);
+    return logData.replace(/\\"password\\":\s*\\"[^"]*\\"/g, '\\"password\\": \\"*****\\"');
   }
 
-  if (Array.isArray(data)) {
-    return data.map((item) => this.sanitize(item));
-  }
-
-  if (typeof data === 'object') {
-    const copy = { ...data };
-
-    for (const key of Object.keys(copy)) {
-      const lower = key.toLowerCase();
-
-      if (
-        lower.includes('password') ||
-        lower.includes('token') ||
-        lower.includes('jwt') ||
-        lower.includes('secret') ||
-        lower.includes('apikey') ||
-        lower === 'authorization'
-      ) {
-        copy[key] = '*****';
-      } else if (typeof copy[key] === 'object' && copy[key] !== null) {
-        copy[key] = this.sanitize(copy[key]);
-      }
-    }
-
-    return copy;
-  }
-
-  return data;
-}
 
 
-
-
+  
   sendLogToGrafana(event) {
-    if (process.env.NODE_ENV === 'test') {
-        return;
-    }
     const body = JSON.stringify(event);
     fetch(`${config.logging.endpointUrl}`, {
       method: 'post',
