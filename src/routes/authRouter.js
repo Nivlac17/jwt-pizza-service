@@ -20,7 +20,7 @@ authRouter.docs = [
     path: '/api/auth',
     description: 'Login existing user',
     example: `curl -X PUT localhost:3000/api/auth -d '{"email":"a@jwt.com", "password":"admin"}' -H 'Content-Type: application/json'`,
-    response: { user: { id: 1, name: '常用名字', email: 'a@jwt.com', roles: [{ role: 'admin' }] }, token: 'tttttt' },
+    response: { user: { id: 1, name: '常用名字', email: 'a@jwt.com', roles: [{ role: 'admin' }] }, token: 'tttttt1' },
   },
   {
     method: 'DELETE',
@@ -29,13 +29,6 @@ authRouter.docs = [
     description: 'Logout a user',
     example: `curl -X DELETE localhost:3000/api/auth -H 'Authorization: Bearer tttttt'`,
     response: { message: 'logout successful' },
-  },
-    {
-    method: 'PUT',
-    path: '/api/auth',
-    description: 'Login existing user',
-    example: `curl -X PUT localhost:3000/api/auth -d '{"email":"calvinm7@byu.edu", "password":"admin1"}' -H 'Content-Type: application/json'`,
-    response: { user: { id: 1, name: 'calvin', email: 'calvinm7@byu.edu', roles: [{ role: 'admin' }] }, token: 'tttttt' },
   },
 ];
 
