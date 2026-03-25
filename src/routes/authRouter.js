@@ -30,6 +30,13 @@ authRouter.docs = [
     example: `curl -X DELETE localhost:3000/api/auth -H 'Authorization: Bearer tttttt'`,
     response: { message: 'logout successful' },
   },
+    {
+    method: 'PUT',
+    path: '/api/auth',
+    description: 'Login existing user',
+    example: `curl -X PUT localhost:3000/api/auth -d '{"email":"calvinm7@byu.edu", "password":"admin1"}' -H 'Content-Type: application/json'`,
+    response: { user: { id: 1, name: 'calvin', email: 'calvinm7@byu.edu', roles: [{ role: 'admin' }] }, token: 'tttttt' },
+  },
 ];
 
 async function setAuthUser(req, res, next) {
