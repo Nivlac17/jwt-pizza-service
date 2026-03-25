@@ -3,7 +3,7 @@ const os = require('os');
 
 
 // Metrics stored in memory
-const requests = {};
+// const requests = {};
 
 let totalRequests = 0;
 
