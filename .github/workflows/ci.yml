@@ -54,10 +54,6 @@ jobs:
                 password: 'tempdbpassword',
                 database: 'pizza',
                 connectTimeout: 60000,
-
-                adminuser: 'kingCalvin',
-                adminpassword: 'BeastMan77',
-                adminemail: 'calvinm7@byu.edu',
               },
               listPerPage: 10,
             },

@@ -41,10 +41,42 @@ class Logger {
     return (Math.floor(Date.now()) * 1000000).toString();
   }
 
-  sanitize(logData) {
-    logData = JSON.stringify(logData);
-    return logData.replace(/\\"password\\":\s*\\"[^"]*\\"/g, '\\"password\\": \\"*****\\"');
+sanitize(data) {
+  if (data === null || data === undefined) return data;
+
+  if (typeof data === 'string') {
+    return data;
   }
+
+  if (Array.isArray(data)) {
+    return data.map((item) => this.sanitize(item));
+  }
+
+  if (typeof data === 'object') {
+    const copy = { ...data };
+
+    for (const key of Object.keys(copy)) {
+      const lower = key.toLowerCase();
+
+      if (
+        lower.includes('password') ||
+        lower.includes('token') ||
+        lower.includes('jwt') ||
+        lower.includes('secret') ||
+        lower.includes('apikey') ||
+        lower === 'authorization'
+      ) {
+        copy[key] = '*****';
+      } else if (typeof copy[key] === 'object' && copy[key] !== null) {
+        copy[key] = this.sanitize(copy[key]);
+      }
+    }
+
+    return copy;
+  }
+
+  return data;
+}
 
 
 
