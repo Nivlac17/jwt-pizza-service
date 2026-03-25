@@ -45,7 +45,8 @@ jobs:
 
       - name: Write config file
         run: |
-          echo "module.exports = {
+          cat > src/config.js <<'EOF'
+          module.exports = {
             jwtSecret: '${{ secrets.JWT_SECRET }}',
             db: {
               connection: {
@@ -66,9 +67,9 @@ jobs:
               endpointUrl: '${{ secrets.METRICS_ENDPOINT_URL }}',
               apiKey: '${{ secrets.METRICS_API_KEY }}',
               accountId: '${{ secrets.METRICS_ACCOUNT_ID_KEY }}',
-            },            
-          };" > src/config.js
-
+            },
+          };
+          EOF
       - name: Tests
         run: npm test
 
