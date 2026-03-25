@@ -80,6 +80,7 @@ orderRouter.post(
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
     const order = await DB.addDinerOrder(req.user, orderReq);
+    const start = Date.now();
 
     try{
         const r = await fetch(`${config.factory.url}/api/order`, {
@@ -105,7 +106,7 @@ orderRouter.post(
       metrics.pizzaPurchase(false, latency, 0);
       throw err;
     }
-    
+
   })
 );
 

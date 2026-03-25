@@ -23,6 +23,25 @@ let purchaseFailureCount = 0;
 let purchaseLatencyTotalMs = 0;
 let purchaseRevenueTotal = 0;
 
+
+let requestLatencyTotalMs = 0;
+let requestLatencyCount = 0;
+
+let authAttempts = 0;
+let authSuccess = 0;
+let authFailure = 0;
+
+function authAttempt(success) {
+  authAttempts += 1;
+
+  if (success) {
+    authSuccess += 1;
+  } else {
+    authFailure += 1;
+  }
+}
+
+
 function requestTracker(req, res, next) {
   totalRequests += 1;
 
@@ -57,6 +76,21 @@ function pizzaPurchase(success, latencyMs, price) {
   } else {
     purchaseFailureCount += 1;
   }
+}
+
+
+function requestLatencyTracker(req, res, next) {
+  const start = Date.now();
+
+  res.on('finish', () => {
+    const latencyMs = Date.now() - start;
+
+    // count total latency by route + method
+    requestLatencyTotalMs += latencyMs;
+    requestLatencyCount += 1;
+  });
+
+  next();
 }
 
 
@@ -115,8 +149,32 @@ setInterval(() => {
   );
 
 
-  sendMetricToGrafana(metrics);
-}, 10000);
+
+    // Total Latancy  
+    metrics.push(
+    createMetric('http_request_latency_ms_total', requestLatencyTotalMs, 'ms', 'sum', 'asInt', {})
+  );
+
+  metrics.push(
+    createMetric('http_request_count_total', requestLatencyCount, '1', 'sum', 'asInt', {})
+  );
+
+
+  // Auth Metrics
+  metrics.push(
+    createMetric('auth_attempts_total', authAttempts, '1', 'sum', 'asInt', {})
+  );
+
+  metrics.push(
+    createMetric('auth_success_total', authSuccess, '1', 'sum', 'asInt', {})
+  );
+
+  metrics.push(
+    createMetric('auth_failure_total', authFailure, '1', 'sum', 'asInt', {})
+  );
+
+    sendMetricToGrafana(metrics);
+  }, 10000);
 
 
 
@@ -182,4 +240,4 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
-module.exports = { requestTracker , pizzaPurchase};
+module.exports = { requestTracker , requestLatencyTracker , pizzaPurchase, authAttempt};
