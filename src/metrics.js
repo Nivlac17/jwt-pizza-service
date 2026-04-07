@@ -31,6 +31,8 @@ let authAttempts = 0;
 let authSuccess = 0;
 let authFailure = 0;
 
+const activeUsers = new Set();
+
 function authAttempt(success) {
   authAttempts += 1;
 
@@ -48,9 +50,10 @@ function requestTracker(req, res, next) {
   const method = requestsByMethod[req.method] !== undefined ? req.method : 'OTHER';
   requestsByMethod[method] += 1;
 
+  activeUsers.add(req.ip);
+
   next();
 }
-
 
 function getCpuUsagePercentage() {
   const cpuUsage = os.loadavg()[0] / os.cpus().length;
@@ -103,6 +106,11 @@ setInterval(() => {
       metric_type: 'Total',
     })
   );
+
+    metrics.push(
+    createMetric('active_users', activeUsers.size, '1', 'gauge', 'asInt', {})
+  );
+
 
   Object.keys(requestsByMethod).forEach((method) => {
     metrics.push(
@@ -176,7 +184,9 @@ setInterval(() => {
     createMetric('auth_failure_total', authFailure, '1', 'sum', 'asInt', {})
   );
 
+
     sendMetricToGrafana(metrics);
+    activeUsers.clear();
   }, 10000);
 
 

@@ -358,7 +358,7 @@ class DB {
           await connection.query(statement);
         }
 
-        if (dbExists) {
+        if (!dbExists) {
           const defaultAdmin = { name: config.db.connection.adminuser, email: config.db.connection.adminemail, password: config.db.connection.adminpassword, roles: [{ role: Role.Admin }] };
           this.addUser(defaultAdmin);
           console.log("Admin Created Successfully");
