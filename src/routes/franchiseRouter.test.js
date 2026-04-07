@@ -267,7 +267,9 @@ test('delete franchise removes it from user franchises', async () => {
   expect(getBeforeDelete.body.map((f) => f.id)).toContain(franchiseId);
 
   // Delete franchise (route has no auth, so no token required)
-  const deleteRes = await request(app).delete(`/api/franchise/${franchiseId}`);
+  const deleteRes = await request(app).delete(`/api/franchise/${franchiseId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
   expect(deleteRes.status).toBe(200);
   expect(deleteRes.body.message).toBe('franchise deleted');
 

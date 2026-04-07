@@ -7,3 +7,4 @@ dist
 genPizzaData.sh
 secrets
 secrets/*
+orderRepeat.sh

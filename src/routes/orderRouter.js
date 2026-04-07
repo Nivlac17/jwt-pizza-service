@@ -78,8 +78,45 @@ orderRouter.post(
   '/',
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
-    const orderReq = req.body;
-    const order = await DB.addDinerOrder(req.user, orderReq);
+    // ----g iven code -----
+    // const orderReq = req.body; 
+    // const order = await DB.addDinerOrder(req.user, orderReq);
+    // ---- given code -----
+
+  // ---------- added check code -------------
+
+  const orderReq = req.body;
+
+  if (!Array.isArray(orderReq.items) || orderReq.items.length === 0) {
+    throw new StatusCodeError('invalid order items', 400);
+  }
+
+  const menu = await DB.getMenu();
+
+  const validatedItems = orderReq.items.map((item) => {
+    const menuItem = menu.find((m) => m.id === item.menuId);
+
+    if (!menuItem) {
+      throw new StatusCodeError('invalid menu item', 400);
+    }
+
+    return {
+      menuId: menuItem.id,
+      description: menuItem.title,
+      price: menuItem.price, 
+    };
+  });
+
+  const cleanOrder = {
+    franchiseId: Number(orderReq.franchiseId),
+    storeId: Number(orderReq.storeId),
+    items: validatedItems,
+  };
+  const order = await DB.addDinerOrder(req.user, cleanOrder);
+
+// ---------- added check code -------------
+
+
     const start = Date.now();
 
     try{
