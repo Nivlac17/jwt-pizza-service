@@ -74,16 +74,18 @@ authRouter.post(
 authRouter.put(
   '/',
   asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    let { email, password } = req.body ?? {};
 
-    
+    email = typeof email === 'string' ? email.trim() : '';
+    password = typeof password === 'string' ? password : '';
+
+    if (!email || !password.trim()) {
+      metrics.authAttempt(false);
+      return res.status(400).json({ message: 'email and password are required' });
+    }
 
     try {
       const user = await DB.getUser(email, password);
-
-      if(!password){
-          return res.status(401).json({ message: 'No password given' });
-      }
 
       if (!user) {
         metrics.authAttempt(false);
@@ -100,6 +102,8 @@ authRouter.put(
     }
   })
 );
+
+
 
 // logout
 authRouter.delete(
