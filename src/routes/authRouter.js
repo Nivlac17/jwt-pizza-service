@@ -79,7 +79,7 @@ authRouter.put(
     email = typeof email === 'string' ? email.trim() : '';
     password = typeof password === 'string' ? password : '';
 
-    if (!email || !password.trim()) {
+    if (!email || !password.trim() ) {
       metrics.authAttempt(false);
       return res.status(400).json({ message: 'email and password are required' });
     }
