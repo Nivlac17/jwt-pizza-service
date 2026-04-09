@@ -76,8 +76,14 @@ authRouter.put(
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
+    
+
     try {
       const user = await DB.getUser(email, password);
+
+      if(!password){
+          return res.status(401).json({ message: 'No password given' });
+      }
 
       if (!user) {
         metrics.authAttempt(false);
