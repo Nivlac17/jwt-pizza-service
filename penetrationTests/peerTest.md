@@ -1,9 +1,8 @@
 # JWT Pizza Penetration Testing Report
 
 ## Both peers names
-### Calvin Merrell
-
-### Spencer Peart
+### **Calvin Merrell**
+### **Spencer Peart**
 
 
 
@@ -16,11 +15,11 @@
 | -------------- | ------------------------------------------------------------------------------ |
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.linesoflight.click                                                       |
-| Classification | Injection                                                                      |
+| Classification | Brute Force                                                                    |
 | Severity       | 1                                                                              |
-| Description    | Submitted a login request with a blank password. The server returned HTTP 200 and issued a valid auth token, indicating an authentication bypass for accounts with empty-password acceptance or improper password validation.                |
-| Images         | ![Dead database](./screenshots/BruteForce.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Reject blank passwords server-side                                                          |
+| Description    | A login request was submitted with a blank password. The server returned HTTP 200 and issued a valid authentication token, indicating an authentication bypass caused by empty-password acceptance or improper password validation.        |
+| Images         | ![BruteForce](./screenshots/BruteForce.png)|
+| Corrections    | Reject blank passwords server-side and enforce proper password validation before issuing tokens. |
 
 
 
@@ -31,10 +30,10 @@
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.linesoflight.click                                                       |
 | Classification | Cryptographic Failures                                                         |
-| Severity       | 0                                                                              |
-| Description    | Collected hundreds of Authtokens, and compared them for patterns. None found.  |
-| Images         | ![Dead database](./screenshots/sequencerToken.png)                             |
-| Corrections    | N/A attack failed.                                                             |
+| Severity       | 2                                                                              |
+| Description    | Hundreds of authentication tokens were collected and compared for patterns. Observable token patterns suggest the token generation method may be predictable or insufficiently random. |
+| Images         | ![Sequencer](./screenshots/sequencerToken.png)                                 |
+| Corrections    | Replace the current token creation method with a cryptographically secure library. |
 
 
 
@@ -44,10 +43,10 @@
 | -------------- | ------------------------------------------------------------------------------ |
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.linesoflight.click                                                       |
-| Classification | Injection                                                                      |
+| Classification | Request Manipulation                                                           |
 | Severity       | 1                                                                              |
-| Description    | Injection of User Prices with cost 0 and negative Numbers returned successful purchase of actual price rather than injected price.                |
-| Images         | ![Dead database](./screenshots/intuderChangePrice.png) <br/> Succesful token purchase with correct price. |
+| Description    | Purchase requests were modified to include custom prices such as 0 and negative values. The server completed the purchase using the actual product price rather than the injected value. This indicates the attempted attack was not successful.|
+| Images         | ![Price Change](./screenshots/intuderChangePrice.png) |
 | Corrections    | N/A attack failed.                                                             |
 
 
@@ -57,15 +56,15 @@
 | -------------- | ------------------------------------------------------------------------------ |
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.linesoflight.click                                                       |
-| Classification | Injection                                                                      |
+| Classification | Request Manipulation                                                                      |
 | Severity       | 0                                                                              |
-| Description    | Diner attempting to delete franchises and stores without admin. Attack Failed. |
-| Images         | ![Dead database](./screenshots/DinerDeleteStore.png) <br/> Stores and menu no longer accessible. |
+| Description    | A diner-role user attempted to delete franchises and stores without administrative privileges. The attack failed, indicating role restrictions were enforced correctly in this case. |
+| Images         | ![Diner Delete Store](./screenshots/DinerDeleteStore.png) |
 | Corrections    | N/A attack failed.                                                             |
 
 
 
-#### Attack Record
+#### Franchise Information Exposure Attack Record
 
 | Item           | Result                                                                         |
 | -------------- | ------------------------------------------------------------------------------ |
@@ -73,9 +72,9 @@
 | Target         | pizza.linesoflight.click                                                       |
 | Classification | Sensitive Information Exposure / Security Misconfiguration                                                                      |
 | Severity       | 1                                                                              |
-| Description    | Sent authenticated API requests with missing and malformed bearer tokens using Burp Repeater. The application exposed framework details through response headers. This exposed a zero error that allows any zero auth token bearrer to gain franchine information.
-| Images         | ![Dead database](./screenshots/RepeaaterFranchiseInfo.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Sanitize user inputs.                                                          |
+| Description    | Authenticated API requests were replayed with missing and malformed bearer tokens in Burp Repeater. The application exposed framework details in response headers. Testing also suggested that malformed or zero-valued bearer tokens may have allowed access to franchise information.
+| Images         | ![Repeater](./screenshots/RepeaterFranchiseInfo.png)  |
+| Corrections    | N/A Attack Failed                                                         |
 
 
 
@@ -170,76 +169,77 @@
 
 
 
-
 ## Peer attack
 
-### Peer 1 attack on peer 2: Create an attack record for each attack.
-#### Attack Record
+### Calvin attack on Spencer: Create an attack record for each attack.
+#### Injecting Personal Prices Attack Record
 
 | Item           | Result                                                                         |
 | -------------- | ------------------------------------------------------------------------------ |
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.spencerpeart.uk                                                          |
-| Classification | Injection                                                                      |
-| Severity       | 1                                                                              |
-| Description    | SQL injection deleted database. All application data destroyed.                |
-| Images         | ![Dead database](deadDatabase.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Sanitize user inputs.                                                          |
+| Classification | Request Manipulation                                                           |
+| Severity       | 2                                                                              |
+| Description    | Purchase requests were modified to use a price of 0 and negative values. A free pizza purchase succeeded. Negative values returned HTTP 400, but application metrics showed a value of -500000 in revenue.  |
+| Images         | ![Stealing Pizza](./screenshots/PeerAttack-StealPizza.png)|
+| Corrections    | Verify all pricing on the server against database values rather than client supplied prices. |
 
 
 
-#### Attack Record
-
-| Item           | Result                                                                         |
-| -------------- | ------------------------------------------------------------------------------ |
-| Date           | April 09, 2026                                                                 |
-| Target         | pizza.spencerpeart.uk                                                          |
-| Classification | Injection                                                                      |
-| Severity       | 1                                                                              |
-| Description    | SQL injection deleted database. All application data destroyed.                |
-| Images         | ![Dead database](deadDatabase.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Sanitize user inputs.                                                          |
-
-
-
-#### Attack Record
+#### Blank Password Brute Force Attack Record
 
 | Item           | Result                                                                         |
 | -------------- | ------------------------------------------------------------------------------ |
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.spencerpeart.uk                                                          |
-| Classification | Injection                                                                      |
-| Severity       | 1                                                                              |
-| Description    | SQL injection deleted database. All application data destroyed.                |
-| Images         | ![Dead database](deadDatabase.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Sanitize user inputs.                                                          |
-
-
-#### Attack Record
-
-| Item           | Result                                                                         |
-| -------------- | ------------------------------------------------------------------------------ |
-| Date           | April 09, 2026                                                                 |
-| Target         | pizza.spencerpeart.uk                                                          |
-| Classification | Injection                                                                      |
-| Severity       | 1                                                                              |
-| Description    | SQL injection deleted database. All application data destroyed.                |
-| Images         | ![Dead database](deadDatabase.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Sanitize user inputs.                                                          |
+| Classification | Brute Force                                                                   |
+| Severity       | 2                                                                              |
+| Description    | Authentication succeeded when the password field was left blank, allowing unauthorized access.|
+| Images         | ![Blank Password](./screenshots/peerAttack-blankPasswordSuccess.png)|
+| Corrections    | Reject blank passwords and validate authentication requests before issuing access tokens.|
 
 
 
-#### Attack Record
+#### Franchise Deletion Without Valid Auth Token Attack Record
 
 | Item           | Result                                                                         |
 | -------------- | ------------------------------------------------------------------------------ |
 | Date           | April 09, 2026                                                                 |
 | Target         | pizza.spencerpeart.uk                                                          |
-| Classification | Injection                                                                      |
-| Severity       | 1                                                                              |
-| Description    | SQL injection deleted database. All application data destroyed.                |
-| Images         | ![Dead database](deadDatabase.png) <br/> Stores and menu no longer accessible. |
-| Corrections    | Sanitize user inputs.                                                          |
+| Classification | Auth Token Manipulation                                                        |
+| Severity       | 4                                                                              |
+| Description    | A request to delete a franchise succeeded without a valid authentication token. The primary franchise and stores were deleted using a fake token. |
+| Images         | ![Deleted Primary Franchise](./screenshots/PrimaryFranchiseDeletedNoToken.png) |
+| Corrections    | Require valid authentication and authorization checks for franchise deletion endpoints. |
+
+
+#### Auth Token Pattern Analysis Attack Record
+
+| Item           | Result                                                                         |
+| -------------- | ------------------------------------------------------------------------------ |
+| Date           | April 09, 2026                                                                 |
+| Target         | pizza.spencerpeart.uk                                                          |
+| Classification | Cryptographic Failures                                                         |
+| Severity       | 2                                                                              |
+| Description    | Hundreds of authentication tokens were collected and compared. Patterns were identified, suggesting potentially weak token generation. |
+| Images         | ![Auth Token Comparison](./screenshots/peerAttack-AuthTokenComparison.png)    |
+| Corrections    | Use a cryptographically secure token generation library with sufficient varriation.|
+
+
+
+#### Registration Insertion Attack Record
+
+| Item           | Result                                                                         |
+| -------------- | ------------------------------------------------------------------------------ |
+| Date           | April 09, 2026                                                                 |
+| Target         | pizza.spencerpeart.uk                                                          |
+| Classification | Brute Force / Insertion                                                        |
+| Severity       | 0                                                                              |
+| Description    | Registration of many users with SQL and code in their names and emails. The database was not affected; however, odd behavior occurred during email handling. The "." was displayed incorrectly |
+| Images         | ![Dead database](deadDatabase.png) |
+| Corrections    | Sanitize and validate user-supplied input during registration.                 |
+
+
 
 
 
@@ -323,4 +323,6 @@
 
 
 ## Combined summary of learnings
-This is a very good and important summary
+This report shows how important database security really is. Access should always be properly checked, and important information should be confirmed by the database instead of trusting user input or values stored on the front end. Strong server-side validation helps prevent unauthorized access and misuse of data.
+
+
